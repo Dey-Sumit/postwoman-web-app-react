@@ -1,0 +1,21 @@
+/* if vs code shows warning , go to setting -> CSS> Lint:Unknown At Rules -> select ignore */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .query-inputs {
+    @apply flex-1 px-2 py-1 bg-transparent outline-none;
+  }
+}
+
+.CodeMirror.cm-s-material.CodeMirror-wrap {
+  height: 100%;
+}
+
+.dropdownControlClass {
+  background-color: rgba(55, 65, 81, 1) !important;
+  color: #fff !important;
+  border: rgba(55, 65, 81, 1) !important;
+}
