@@ -2,7 +2,8 @@ import "codemirror/lib/codemirror.css";
 import "codemirror/theme/material.css";
 import { useEffect, useState } from "react";
 import { Controlled as ControlledEditor } from "react-codemirror2";
-
+import RingLoader from "@public/RingLoader.svg";
+import Image from "next/image";
 if (typeof navigator !== "undefined") {
   require("codemirror/mode/javascript/javascript");
 }
@@ -27,6 +28,8 @@ const ResponseSection = ({ responseContent, responseTime, statusCode }) => {
       </div>
 
       {/* body */}
+      <Image src={RingLoader} alt="loader" width={50} height={50} />
+
       <div className="">
         <ControlledEditor
           onBeforeChange={() => {}}
