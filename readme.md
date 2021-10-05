@@ -23,11 +23,16 @@ npm run start
 - [x] show response time 
 - [x] add responsiveness for mobile
 - [ ] create and add variables
-- [ ] create multiiple requests using tabs
+- [x] create multiple requests using tabs
 - [ ] add auth
 - [ ] add database to store the requests
 - [ ] convert request to axios code 😍 
 
+## Bugs Found :
+- [ ] duration on request failed
+- [ ] proper error handling
+- [ ] bug on pressing enter (send request through keyboard)
+- [ ] 
 
 ## Contributing
 Pull requests are always welcome. For major changes, please open an issue first to discuss what you would like to change.

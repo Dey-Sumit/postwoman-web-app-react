@@ -3,6 +3,7 @@ import { SetStateAction } from "react";
 import { Dispatch, FC, useState } from "react";
 import { MdDelete } from "react-icons/md";
 import { IoMdAdd } from "react-icons/io";
+import { useLayoutState } from "src/context/layout.context";
 
 interface Pair {
   id: number;
@@ -32,20 +33,6 @@ const QueryParams: FC<Props> = ({ pairs, setPairs }) => {
     setPairs(updatedPairs);
   };
 
-  const makeRequest = async () => {
-    const obj = {};
-    pairs.map((pair) => {
-      obj[pair.key] = pair.value;
-    });
-    console.log(obj);
-
-    await axios({
-      method: "GET",
-      url: "https://jsonplaceholder.typicode.com/comments",
-      params: obj,
-    });
-  };
-
   const updatePair = (event, id: Number, type: "key" | "value") => {
     let tempPairs = [...pairs];
     const pairIndex = pairs.findIndex((pair) => pair.id === id);
@@ -55,19 +42,16 @@ const QueryParams: FC<Props> = ({ pairs, setPairs }) => {
 
   return (
     <>
-      <h1 className="mb-2">Query Params</h1>
+      <h1 className="px-2 mb-2 text-sm">Query Params</h1>
 
-      <div className="flex w-full uppercase border-[0.5px] border-gray-600 divide-x divide-gray-600 ">
-        <span className="flex-1 px-2 py-1 bg-transparent outline-none">Key</span>
-        <span className="flex-1 px-2 py-1 bg-transparent outline-none">Value</span>
+      <div className="text-sm flex w-full uppercase border-[0.5px] border-gray-600 divide-x divide-gray-600 ">
+        <span className="flex-1 px-2 py-2 bg-transparent outline-none">Key</span>
+        <span className="flex-1 px-2 py-2 bg-transparent outline-none">Value</span>
       </div>
       {pairs.map((pair) => (
-        <div
-          key={pair.id}
-          className="relative flex w-full border-[0.5px] border-t-0 items-center border-gray-600"
-        >
+        <div key={pair.id} className="relative flex w-full border-[0.5px] border-t-0 items-center border-gray-600">
           <input
-            className="border-r border-gray-600 query-inputs"
+            className="border-r border-gray-600 query-inputs "
             type="text"
             placeholder="key"
             size={1}
@@ -83,14 +67,11 @@ const QueryParams: FC<Props> = ({ pairs, setPairs }) => {
             onChange={(event) => updatePair(event, pair.id, "value")}
           />
           {/* <input className="query-inputs" type="text" placeholder="description" /> */}
-          <MdDelete
-            onClick={() => deleteField(pair.id)}
-            className="absolute text-red-400 cursor-pointer right-2"
-          />
+          <MdDelete onClick={() => deleteField(pair.id)} className="absolute text-gray-400 cursor-pointer right-2" />
         </div>
       ))}
       <button onClick={addQueryParamField} className="mt-2 text-white ">
-        <IoMdAdd size={26} className="text-white" />
+        <IoMdAdd size={26} className="text-gray-500" />
       </button>
     </>
   );

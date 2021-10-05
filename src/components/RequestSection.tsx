@@ -1,5 +1,5 @@
-import axios, { AxiosError } from "axios";
-import { useState } from "react";
+import axios, { AxiosError, CancelTokenSource } from "axios";
+import { useEffect, useRef, useState } from "react";
 import Dropdown from "react-dropdown";
 import "react-dropdown/style.css";
 import QueryParams from "./QueryParams";
@@ -12,22 +12,23 @@ if (typeof navigator !== "undefined") {
 }
 //TODO remove this library, add regex from SOverflow
 import validUrl from "valid-url";
-import { FaSave } from "react-icons/fa";
+import { FaGithub, FaSave } from "react-icons/fa";
 import { RiSendPlaneFill } from "react-icons/ri";
 import clientInstance from "utils/apiClient";
 import classNames from "classnames";
+import { useLayoutDispatch, useLayoutState } from "src/context/layout.context";
 
 const options = ["GET", "POST", "PUT", "DELETE", "PATCH"];
 
 //! of no use so far
-function isURL(str) {
+function isURL(str: string) {
   var urlRegex = /(?:^|[ \t])((https?:\/\/)?(?:localhost|[\w-]+(?:\.[\w-]+)+)(:\d+)?(\/\S*)?)/;
 
   var url = new RegExp(urlRegex, "i");
   return str.length < 2083 && url.test(str);
 }
 
-var cancelTokenSource;
+let cancelTokenSource: CancelTokenSource;
 
 const variables = [
   {
@@ -48,30 +49,50 @@ const getRawURL = (url: string) => {
   return url.replace(/{(.*?)}/gi, (x: string) => getValue(x.substring(1, x.length - 1)));
 };
 
-const RequestSection = ({ setResponseContent, setResponseTime, setStatusCode }) => {
-  const [pairs, setPairs] = useState([
-    {
-      id: Math.floor(Math.random() * 2000),
-      key: "",
-      value: "",
-    },
-  ]);
-  const [codeEditorState, setCodeEditorState] = useState("{\n\t\n}");
+const RequestSection = () => {
+  const { responseLoading } = useLayoutState();
+  const { activeRequestScreenId, requestScreens } = useLayoutState();
+  const urlInput = useRef(null);
+
+  const activeRequestScreenIndex = requestScreens.findIndex(
+    (requestScreen) => requestScreen.id === activeRequestScreenId
+  );
+
+  const requestScreen = requestScreens[activeRequestScreenIndex];
+  const {
+    requestData: { type, body, queryParams, url },
+  } = requestScreen;
+  const layoutDispatch = useLayoutDispatch();
 
   const [currentTab, setCurrentTab] = useState<"Params" | "Headers" | "Tests" | "Body">("Params");
-  const [url, setUrl] = useState("");
-  const [method, setMethod] = useState<"GET" | "POST" | "PUT" | "DELETE" | "PATCH">("GET");
-
-  const [responseLoading, setResponseLoading] = useState(false);
+  // const [url, setUrl] = useState("");
+  // const [method, setMethod] = useState<"GET" | "POST" | "PUT" | "DELETE" | "PATCH">("GET");
 
   const keyValuePairsToObject = () => {
     const obj = {};
-    pairs.map((pair) => {
+    requestScreen.requestData.queryParams.map((pair) => {
       if (!pair.key) return;
       obj[pair.key] = pair.value;
     });
     return obj;
   };
+
+  useEffect(() => {
+    const listener = async (event) => {
+      if (event.code === "Enter" || event.code === "NumpadEnter") {
+        event.preventDefault();
+        // check if input is in focus or not
+        if (document.activeElement !== urlInput.current) return;
+
+        if (responseLoading) cancelRequest();
+        else await makeRequest();
+      }
+    };
+    document.addEventListener("keydown", listener);
+    return () => {
+      document.removeEventListener("keydown", listener);
+    };
+  }, []);
 
   // Cancel request
   const cancelRequest = () => {
@@ -79,69 +100,118 @@ const RequestSection = ({ setResponseContent, setResponseTime, setStatusCode }) 
   };
 
   const makeRequest = async () => {
+    console.log("make req");
+
     let newUrl: string;
     if (url.search(/{(.*?)}/) === -1) newUrl = url;
     else newUrl = getRawURL(url);
 
     if (!validUrl.isUri(newUrl)) return;
 
-    setResponseLoading(true);
+    layoutDispatch({ type: "START_RESPONSE_LOADER" });
     cancelTokenSource = axios.CancelToken.source();
     try {
       const response = await clientInstance({
-        method: method,
+        method: type,
         url: newUrl,
         params: keyValuePairsToObject(),
-        data: JSON.parse(codeEditorState),
+        data: JSON.parse(requestScreen.requestData.body),
         cancelToken: cancelTokenSource.token,
       });
-      console.log(response);
 
-      setStatusCode(response.status);
-      setResponseContent(JSON.stringify(response.data, null, 2));
+      layoutDispatch({
+        type: "SET_RESPONSE_DATA",
+        payload: {
+          dataObj: {
+            content: JSON.stringify(response.data, null, 2),
+            statusCode: response.status,
+            size: "100", // TODO
+            //@ts-ignore
+            duration: response.duration / 1000.0,
+          },
+          requestScreen: requestScreen,
+          id: requestScreen.id,
+        },
+      });
 
-      //@ts-ignore
-      setResponseTime(response.duration / 1000.0); //! FIX response type is not updated on error
+      // setResponseContent();
     } catch (error) {
       const err: AxiosError = error;
-      setStatusCode(err?.response.status || 499);
       //499 Client Closed Request Used when the client has closed the request before the server could send a response.
-      console.log(error.response.data.message);
-      setResponseContent(err.response?.data?.message || err.message);
+      // console.log(error.response.data.message);
+
+      layoutDispatch({
+        type: "SET_RESPONSE_DATA",
+        payload: {
+          dataObj: {
+            content: err.response?.data?.message || err.message,
+            statusCode: err?.response.status || 499,
+            size: "0", // TODO
+            //@ts-ignore
+            duration: 0, // TODO FIX
+          },
+          requestScreen: requestScreen,
+          id: requestScreen.id,
+        },
+      });
     } finally {
-      setResponseLoading(false);
+      layoutDispatch({ type: "STOP_RESPONSE_LOADER" });
     }
   };
 
   const handleRequestMethod = (type) => {
-    setMethod(type.value);
+    layoutDispatch({
+      type: "SET_REQUEST_DATA",
+      payload: { key: "method", data: type.value, requestScreen: requestScreen, id: requestScreen.id },
+    });
+  };
+
+  const handleRequestBody = (value) => {
+    layoutDispatch({
+      type: "SET_REQUEST_DATA",
+      payload: { key: "body", data: value, requestScreen: requestScreen, id: requestScreen.id },
+    });
+  };
+
+  const handelUrlChange = (value) => {
+    layoutDispatch({
+      type: "SET_REQUEST_DATA",
+      payload: { key: "url", data: value, requestScreen: requestScreen, id: requestScreen.id },
+    });
+  };
+  const handleQueryPairs = (pairs) => {
+    layoutDispatch({
+      type: "SET_REQUEST_DATA",
+      payload: { key: "queryParams", data: pairs, requestScreen: requestScreen, id: requestScreen.id },
+    });
   };
 
   return (
-    <div className="h-auto col-span-full md:col-span-5 md:h-full ">
+    <div className="h-auto border-b border-gray-600 col-span-full md:col-span-5 md:h-full ">
       {/* header start */}
       <div className="flex items-center space-x-2 ">
         <div className="flex flex-1 ">
           <Dropdown
             options={options}
             onChange={handleRequestMethod}
-            value={method}
+            value={type}
             placeholder="Select an option"
             className=""
             controlClassName="dropdownControlClass"
           />
 
           <input
-            className="flex-1 px-4 text-white bg-gray-700 outline-none"
-            placeholder="url"
+            className="flex-1 px-4 text-white outline-none bg-dark-700"
+            placeholder="https://jsonplaceholder.typicode.com/todos/1"
             value={url}
-            onChange={(e) => setUrl(e.target.value)}
+            ref={urlInput}
+            onChange={(e) => handelUrlChange(e.target.value)}
             type="url"
             size={1}
           />
         </div>
         <button
-          className={classNames("flex h-10  items-center p-2 px-3 space-x-1 bg-green-600 ", {
+          className={classNames("button ", {
             "bg-red-500": responseLoading,
           })}
           onClick={responseLoading ? cancelRequest : makeRequest}
@@ -149,8 +219,16 @@ const RequestSection = ({ setResponseContent, setResponseTime, setStatusCode }) 
           <RiSendPlaneFill />
           <span className="hidden sm:block">{responseLoading ? "Cancel" : "Send"}</span>
         </button>
-        <button className="h-10 px-3 bg-green-600 ">
+        <button className="button">
           <FaSave />
+          <span className="hidden sm:block">Save</span>
+        </button>
+        <button
+          className="bg-yellow-800 button"
+          onClick={() => window.open("https://github.com/Dey-Sumit/postwoman-web-app-react")}
+        >
+          <FaGithub />
+          <span className="hidden sm:block">Github</span>
         </button>
       </div>
       {/* header end */}
@@ -158,7 +236,7 @@ const RequestSection = ({ setResponseContent, setResponseTime, setStatusCode }) 
       {/* body start*/}
 
       {/* tabs */}
-      <div className="flex mt-4 space-x-5 border-b border-gray-500">
+      <div className="flex mt-4 space-x-5 border-b border-gray-600">
         <button className="p-2 focus:outline-none " onClick={() => setCurrentTab("Params")}>
           Params
         </button>
@@ -173,12 +251,14 @@ const RequestSection = ({ setResponseContent, setResponseTime, setStatusCode }) 
         </button>
       </div>
 
-      <div className="my-2">
-        {currentTab === "Params" && <QueryParams pairs={pairs} setPairs={setPairs} />}
+      <div className="my-2 h-60">
+        {currentTab === "Params" && (
+          <QueryParams pairs={requestScreen.requestData.queryParams} setPairs={handleQueryPairs} />
+        )}
         {currentTab === "Body" && (
           <ControlledEditor
-            onBeforeChange={(editor, data, value) => setCodeEditorState(value)}
-            value={codeEditorState}
+            onBeforeChange={(editor, data, value) => handleRequestBody(value)}
+            value={requestScreen.requestData.body}
             className="code-mirror-wrapper"
             options={{
               lineWrapping: true,
