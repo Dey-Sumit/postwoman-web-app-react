@@ -7,9 +7,6 @@ import { AiOutlinePlus } from "react-icons/ai";
 const Tabs = () => {
   const { activeRequestScreenId, requestScreens } = useLayoutState();
   const layoutDispatch = useLayoutDispatch();
-  console.log("Tabs rerender");
-
-  console.log({ activeRequestScreenId });
 
   const setActiveScreen = (id: number) => {
     layoutDispatch({ type: "SET_ACTIVE_SCREEN", payload: id });

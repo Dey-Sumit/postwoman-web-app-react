@@ -12,6 +12,7 @@ if (typeof navigator !== "undefined") {
 }
 //TODO remove this library, add regex from SOverflow
 import validUrl from "valid-url";
+import isUrl from "is-url";
 import { FaGithub, FaSave } from "react-icons/fa";
 import { RiSendPlaneFill } from "react-icons/ri";
 import clientInstance from "utils/apiClient";
@@ -30,28 +31,22 @@ function isURL(str: string) {
 
 let cancelTokenSource: CancelTokenSource;
 
-const variables = [
-  {
-    name: "BASE_URL",
-    value: "http://localhost:3000",
-  },
-  {
-    name: "BASE_URL_2",
-    value: "http://localhost:3002",
-  },
-];
+// const variables = [
+//   {
+//     name: "BASE_URL",
+//     value: "http://localhost:3000",
+//   },
+//   {
+//     name: "BASE_URL_2",
+//     value: "http://localhost:3002",
+//   },
+// ];
 
 // url = "{BASE_URL}/api/todos/";
 
-const getValue = (variableName: string) => variables.find((v) => v.name === variableName)?.value;
-const getRawURL = (url: string) => {
-  // extract all the variables eg : {BASE_URL} => remove the braces => replace with the values
-  return url.replace(/{(.*?)}/gi, (x: string) => getValue(x.substring(1, x.length - 1)));
-};
-
 const RequestSection = () => {
   const { responseLoading } = useLayoutState();
-  const { activeRequestScreenId, requestScreens } = useLayoutState();
+  const { activeRequestScreenId, requestScreens, variables } = useLayoutState();
   const urlInput = useRef(null);
 
   const activeRequestScreenIndex = requestScreens.findIndex(
@@ -76,6 +71,14 @@ const RequestSection = () => {
     });
     return obj;
   };
+
+  const getValue = (variableName: string) => variables.find((v) => v.key === variableName)?.value;
+  const getRawURL = (url: string) => {
+    // extract all the variables eg : {BASE_URL} => remove the braces => replace with the values
+    return url.replace(/{(.*?)}/gi, (x: string) => getValue(x.substring(1, x.length - 1)));
+  };
+
+  const [notValidUrl, setNotValidUrl] = useState(false);
 
   useEffect(() => {
     const listener = async (event) => {
@@ -106,7 +109,14 @@ const RequestSection = () => {
     if (url.search(/{(.*?)}/) === -1) newUrl = url;
     else newUrl = getRawURL(url);
 
-    if (!validUrl.isUri(newUrl)) return;
+    console.log("valid", isUrl(newUrl));
+
+    if (!isUrl(newUrl)) {
+      console.log("here");
+
+      setNotValidUrl(true);
+      return;
+    }
 
     layoutDispatch({ type: "START_RESPONSE_LOADER" });
     cancelTokenSource = axios.CancelToken.source();
@@ -131,6 +141,7 @@ const RequestSection = () => {
           },
           requestScreen: requestScreen,
           id: requestScreen.id,
+          error: false,
         },
       });
 
@@ -145,13 +156,21 @@ const RequestSection = () => {
         payload: {
           dataObj: {
             content: err.response?.data?.message || err.message,
-            statusCode: err?.response.status || 499,
+            statusCode: err?.response?.status || 499,
             size: "0", // TODO
             //@ts-ignore
             duration: 0, // TODO FIX
           },
           requestScreen: requestScreen,
           id: requestScreen.id,
+          error: true,
+        },
+      });
+      layoutDispatch({
+        type: "SET_ERROR",
+        payload: {
+          screenId: requestScreen.id,
+          requestScreen,
         },
       });
     } finally {
@@ -174,6 +193,7 @@ const RequestSection = () => {
   };
 
   const handelUrlChange = (value) => {
+    setNotValidUrl(false);
     layoutDispatch({
       type: "SET_REQUEST_DATA",
       payload: { key: "url", data: value, requestScreen: requestScreen, id: requestScreen.id },
@@ -187,7 +207,7 @@ const RequestSection = () => {
   };
 
   return (
-    <div className="h-auto border-b border-gray-600 col-span-full md:col-span-5 md:h-full ">
+    <div className="h-auto border-b border-gray-600 ">
       {/* header start */}
       <div className="flex items-center space-x-2 ">
         <div className="flex flex-1 ">
@@ -201,7 +221,9 @@ const RequestSection = () => {
           />
 
           <input
-            className="flex-1 px-4 text-white outline-none bg-dark-700"
+            className={classNames("flex-1 px-4 text-white outline-none bg-dark-700", {
+              "border-red-500 border": notValidUrl,
+            })}
             placeholder="https://jsonplaceholder.typicode.com/todos/1"
             value={url}
             ref={urlInput}
@@ -251,7 +273,7 @@ const RequestSection = () => {
         </button>
       </div>
 
-      <div className="my-2 h-60">
+      <div className="h-56 my-2">
         {currentTab === "Params" && (
           <QueryParams pairs={requestScreen.requestData.queryParams} setPairs={handleQueryPairs} />
         )}

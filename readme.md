@@ -24,7 +24,7 @@ SOON!
 - [x] add multiple query params
 - [x] show response time
 - [x] add responsiveness for mobile
-- [ ] create and add variables
+- [x] create and add variables
 - [x] create multiple requests using tabs
 - [ ] add auth
 - [ ] add database to store the requests
