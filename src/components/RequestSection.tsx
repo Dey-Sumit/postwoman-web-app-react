@@ -259,16 +259,28 @@ const RequestSection = () => {
 
       {/* tabs */}
       <div className="flex mt-4 space-x-5 border-b border-gray-600">
-        <button className="p-2 focus:outline-none " onClick={() => setCurrentTab("Params")}>
+        <button className={classNames("p-2 focus:outline-none",{
+          "border-2 border-white":currentTab==="Params",
+        })}
+         onClick={() => setCurrentTab("Params")}>
           Params
         </button>
-        <button className="p-2 focus:outline-none " onClick={() => setCurrentTab("Headers")}>
+        <button className={classNames("p-2 focus:outline-none",{
+          "border-2  border-white":currentTab==="Headers",
+        })}
+         onClick={() => setCurrentTab("Headers")}>
           Headers
         </button>
-        <button className="p-2 focus:outline-none " onClick={() => setCurrentTab("Body")}>
+        <button className={classNames("p-2 focus:outline-none",{
+          "border-2 border-white":currentTab==="Body",
+        })}
+         onClick={() => setCurrentTab("Body")}>
           Body
         </button>
-        <button className="p-2 focus:outline-none " onClick={() => setCurrentTab("Tests")}>
+        <button className={classNames("p-2 focus:outline-none",{
+          "border-2 border-white":currentTab==="Tests",
+        })}
+         onClick={() => setCurrentTab("Tests")}>
           Tests
         </button>
       </div>
