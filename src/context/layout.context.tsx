@@ -66,7 +66,7 @@ interface RequestScreen {
     statusCode: number;
     content: any;
     size: string;
-    time: any;
+    duration: any;
   };
   error: boolean;
 }
@@ -276,7 +276,7 @@ export const LayoutProvider = ({ children }) => {
           statusCode: null,
           content: null,
           size: null,
-          time: null,
+          duration: null,
         },
         error: false,
       },
@@ -299,7 +299,7 @@ export const LayoutProvider = ({ children }) => {
           statusCode: null,
           content: null,
           size: null,
-          time: null,
+          duration: null,
         },
         error: false,
       },
