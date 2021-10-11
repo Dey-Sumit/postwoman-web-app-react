@@ -18,7 +18,7 @@ const ResponseSection = () => {
 
   const requestScreen = requestScreens[activeRequestScreenIndex];
   const {
-    responseData: { content, size, statusCode, time },
+    responseData: { content, size, statusCode, duration },
     error,
   } = requestScreen;
 
@@ -35,7 +35,7 @@ const ResponseSection = () => {
         </div>
         <div className="flex items-center justify-between space-x-4">
           <span>Status : {statusCode}</span>
-          <span>Time : {time || 0}s</span>
+          <span>Time : {duration || 0} s</span>
           {/* <span>Size : 0b</span> */}
         </div>
       </div>
